@@ -1,78 +1,16 @@
 name: Build APK
-on:
-  push:
-    branches: [ main ]
+on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Unzip project
-        run: |
-          ZIP=$(ls *.zip | head -n 1)
-          unzip -o "$ZIP"
-          PUB=$(find . -name "pubspec.yaml" | head -n 1)
-          PROJ_DIR=$(dirname "$PUB")
-          if [ "$PROJ_DIR" != "." ]; then cp -r "$PROJ_DIR"/* ./; fi
-          rm -rf hello-world-5 *.zip __MACOSX
-      - name: Fix Package
-        run: |
-          cat > android/app/build.gradle.kts << 'EOF'
-          import java.util.Properties
-          plugins {
-              id("com.android.application")
-              id("kotlin-android")
-              id("dev.flutter.flutter-gradle-plugin")
-          }
-          val localProperties = Properties()
-          val localPropertiesFile = rootProject.file("local.properties")
-          if (localPropertiesFile.exists()) {
-              localPropertiesFile.inputStream().use { localProperties.load(it) }
-          }
-          val flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "1"
-          val flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.0"
-          android {
-              namespace = "com.example.myapp"
-              compileSdk = flutter.compileSdkVersion
-              ndkVersion = flutter.ndkVersion
-              compileOptions {
-                  sourceCompatibility = JavaVersion.VERSION_11
-                  targetCompatibility = JavaVersion.VERSION_11
-              }
-              kotlinOptions {
-                  jvmTarget = JavaVersion.VERSION_11.toString()
-              }
-              defaultConfig {
-                  applicationId = "com.example.myapp"
-                  minSdk = 21
-                  targetSdk = flutter.targetSdkVersion
-                  versionCode = flutterVersionCode.toInt()
-                  versionName = flutterVersionName
-              }
-              buildTypes {
-                  release {
-                      isMinifyEnabled = false
-                      isShrinkResources = false
-                  }
-              }
-          }
-          flutter {
-              source = "../.."
-          }
-          EOF
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
+      - uses: actions/checkout@v3
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.5'
-          channel: 'stable'
-      - run: flutter clean
+          flutter-version: '3.22.0'
       - run: flutter pub get
-      - run: flutter build apk --release --split-per-abi
-      - run: flutter build apk --release
+      - run: flutter build apk --release --no-tree-shake-icons
       - uses: actions/upload-artifact@v4
         with:
           name: app-release
-          path: build/app/outputs/flutter-apk/*.apk
+          path: build/app/outputs/flutter-apk/app-release.apk
