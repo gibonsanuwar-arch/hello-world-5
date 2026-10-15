@@ -8,8 +8,15 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.22.0'
-      - run: flutter pub get
-      - run: flutter build apk --release --no-tree-shake-icons
+          channel: 'stable'
+      - name: Find pubspec
+        run: |
+          ls -la
+          find. -name "pubspec.yaml"
+      - name: Get dependencies
+        run: flutter pub get
+      - name: Build APK
+        run: flutter build apk --release --no-tree-shake-icons
       - uses: actions/upload-artifact@v4
         with:
           name: app-release
