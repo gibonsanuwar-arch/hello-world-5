@@ -11,17 +11,11 @@ jobs:
         run: |
           ZIP=$(ls *.zip | head -n 1)
           unzip -o "$ZIP"
-          FOLDER=$(ls -d */ | head -n 1)
-          if [ -f "$FOLDER/pubspec.yaml" ]; then
-            cp -r "$FOLDER"* ./
-            cp -r "$FOLDER".* ./ 2>/dev/null || true
-          else
-            INNER=$(find . -name "pubspec.yaml" | head -n 1 | xargs dirname)
-            cp -r "$INNER"/* ./ 2>/dev/null || true
-          fi
-          rm -rf "$FOLDER" *.zip __MACOSX
-          ls -la
-      - name: Fix build.gradle.kts
+          PUB=$(find . -name "pubspec.yaml" | head -n 1)
+          PROJ_DIR=$(dirname "$PUB")
+          if [ "$PROJ_DIR" != "." ]; then cp -r "$PROJ_DIR"/* ./; fi
+          rm -rf hello-world-5 *.zip __MACOSX
+      - name: Fix Package
         run: |
           cat > android/app/build.gradle.kts << 'EOF'
           import java.util.Properties
@@ -38,7 +32,7 @@ jobs:
           val flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "1"
           val flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.0"
           android {
-              namespace = "com.example.hello_world_5"
+              namespace = "com.example.myapp"
               compileSdk = flutter.compileSdkVersion
               ndkVersion = flutter.ndkVersion
               compileOptions {
@@ -49,8 +43,8 @@ jobs:
                   jvmTarget = JavaVersion.VERSION_11.toString()
               }
               defaultConfig {
-                  applicationId = "com.example.hello_world_5"
-                  minSdk = flutter.minSdkVersion
+                  applicationId = "com.example.myapp"
+                  minSdk = 21
                   targetSdk = flutter.targetSdkVersion
                   versionCode = flutterVersionCode.toInt()
                   versionName = flutterVersionName
@@ -76,8 +70,9 @@ jobs:
           channel: 'stable'
       - run: flutter clean
       - run: flutter pub get
+      - run: flutter build apk --release --split-per-abi
       - run: flutter build apk --release
       - uses: actions/upload-artifact@v4
         with:
           name: app-release
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/*.apk
