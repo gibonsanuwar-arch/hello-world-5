@@ -7,37 +7,47 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Unzip project
+      - name: Unzip project correctly
         run: |
           ZIP=$(ls *.zip | head -n 1)
+          echo "Zip: $ZIP"
           unzip -o "$ZIP"
-          FOLDER=$(unzip -Z -1 "$ZIP" | head -n 1 | cut -d/ -f1)
-          if [ -d "$FOLDER" ]; then cp -r "$FOLDER"/* ./; rm -rf "$FOLDER"; fi
-          rm -f *.zip
+          rm -f "$ZIP"
+          # Find where pubspec.yaml is
+          PUB=$(find . -name "pubspec.yaml" | head -n 1)
+          echo "Pubspec found at: $PUB"
+          PROJ_DIR=$(dirname "$PUB")
+          echo "Project dir: $PROJ_DIR"
+          # Move all files to root
+          if [ "$PROJ_DIR" != "." ]; then
+            cp -r "$PROJ_DIR"/* ./
+            cp -r "$PROJ_DIR"/.* ./ 2>/dev/null || true
+          fi
+          # Clean nested leftovers
+          rm -rf hello-world-5
           ls -la
-      - name: Overwrite broken build.gradle.kts with fixed version
+          ls -la android/app/ || true
+      - name: Fix build.gradle.kts
         run: |
-          cat > android/app/build.gradle.kts << 'EOF'
+          # Overwrite wherever it exists
+          TARGET="android/app/build.gradle.kts"
+          cat > $TARGET << 'EOF'
           plugins {
               id("com.android.application")
               id("kotlin-android")
               id("dev.flutter.flutter-gradle-plugin")
           }
-
           val localProperties = java.util.Properties()
           val localPropertiesFile = rootProject.file("local.properties")
           if (localPropertiesFile.exists()) {
               localPropertiesFile.inputStream().use { localProperties.load(it) }
           }
-
           val flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "1"
           val flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.0"
-
           android {
               namespace = "com.example.hello_world_5"
               compileSdk = flutter.compileSdkVersion
               ndkVersion = flutter.ndkVersion
-
               compileOptions {
                   sourceCompatibility = JavaVersion.VERSION_11
                   targetCompatibility = JavaVersion.VERSION_11
@@ -45,7 +55,6 @@ jobs:
               kotlinOptions {
                   jvmTarget = JavaVersion.VERSION_11.toString()
               }
-
               defaultConfig {
                   applicationId = "com.example.hello_world_5"
                   minSdk = flutter.minSdkVersion
@@ -53,7 +62,6 @@ jobs:
                   versionCode = flutterVersionCode.toInt()
                   versionName = flutterVersionName
               }
-
               buildTypes {
                   release {
                       isMinifyEnabled = false
@@ -61,12 +69,12 @@ jobs:
                   }
               }
           }
-
           flutter {
               source = "../.."
           }
           EOF
-          cat android/app/build.gradle.kts
+          echo "Fixed file:"
+          cat $TARGET
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
