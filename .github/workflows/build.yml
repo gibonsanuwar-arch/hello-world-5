@@ -7,37 +7,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Unzip project correctly
+      - name: Unzip project
         run: |
           ZIP=$(ls *.zip | head -n 1)
-          echo "Zip: $ZIP"
           unzip -o "$ZIP"
-          rm -f "$ZIP"
-          # Find where pubspec.yaml is
-          PUB=$(find . -name "pubspec.yaml" | head -n 1)
-          echo "Pubspec found at: $PUB"
-          PROJ_DIR=$(dirname "$PUB")
-          echo "Project dir: $PROJ_DIR"
-          # Move all files to root
-          if [ "$PROJ_DIR" != "." ]; then
-            cp -r "$PROJ_DIR"/* ./
-            cp -r "$PROJ_DIR"/.* ./ 2>/dev/null || true
+          FOLDER=$(ls -d */ | head -n 1)
+          if [ -f "$FOLDER/pubspec.yaml" ]; then
+            cp -r "$FOLDER"* ./
+            cp -r "$FOLDER".* ./ 2>/dev/null || true
+          else
+            INNER=$(find . -name "pubspec.yaml" | head -n 1 | xargs dirname)
+            cp -r "$INNER"/* ./ 2>/dev/null || true
           fi
-          # Clean nested leftovers
-          rm -rf hello-world-5
+          rm -rf "$FOLDER" *.zip __MACOSX
           ls -la
-          ls -la android/app/ || true
       - name: Fix build.gradle.kts
         run: |
-          # Overwrite wherever it exists
-          TARGET="android/app/build.gradle.kts"
-          cat > $TARGET << 'EOF'
+          cat > android/app/build.gradle.kts << 'EOF'
+          import java.util.Properties
           plugins {
               id("com.android.application")
               id("kotlin-android")
               id("dev.flutter.flutter-gradle-plugin")
           }
-          val localProperties = java.util.Properties()
+          val localProperties = Properties()
           val localPropertiesFile = rootProject.file("local.properties")
           if (localPropertiesFile.exists()) {
               localPropertiesFile.inputStream().use { localProperties.load(it) }
@@ -73,8 +66,6 @@ jobs:
               source = "../.."
           }
           EOF
-          echo "Fixed file:"
-          cat $TARGET
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
