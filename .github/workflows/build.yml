@@ -9,18 +9,13 @@ jobs:
         with:
           flutter-version: '3.22.0'
           channel: 'stable'
-      - name: Unzip and prepare
-        run: |
-          unzip -o hello-world-5.zip
-          ls -la
-          if [ -d "hello-world-5" ]; then
-            cp -r hello-world-5/* ./
-          fi
-          ls -la
+      - run: unzip -o hello-world-5.zip
       - run: flutter pub get
+        working-directory: "Hello-World (5)"
       - run: flutter build apk --release
+        working-directory: "Hello-World (5)"
       - uses: actions/upload-artifact@v4
         with:
           name: app-release
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: "Hello-World (5)/build/app/outputs/flutter-apk/app-release.apk"
         
